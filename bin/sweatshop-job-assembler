@@ -1,45 +1,82 @@
 #!/usr/bin/env ruby
+require 'bundler/setup'
 require 'yaml'
-require_relative '../lib/sweatshop/queue-helper'
-require_relative '../lib/sweatshop/config'
+require 'json'
+require 'contracts'
+require 'sweatshop/queue-helper'
+require 'sweatshop/config'
 
-def load_config(for_job:)
-  job_directory = File.expand_path configatron.job_directory
-  file_path = "#{job_directory}/#{for_job}.yaml"
-  puts file_path
-  if File.file?(file_path)
-    YAML.load_file file_path
-  else
-    puts "No config found for job '#{for_job}'"
-    nil
-  end
+$stdout.sync = true
+include Contracts
+
+Contract None => Hash
+def empty_config
+  puts "Job configuration not found"
+  {}
 end
 
-def serialize(value)
-  value.is_a?(Hash) ? JSON.generate(value) : value.to_s
+Contract None => String
+def job_directory
+  File.expand_path configatron.job_directory
 end
 
-def assemble_job(data)
-  job_config = load_config for_job: data['job_name']
-  return nil if job_config.nil?
-  if job_config['branch_whitelist'].include? data['payload']['branch']
-    context = job_config['environment'].merge(data['payload'])
-    context.each { |key, value| context[key] = serialize value }
-    {
-      commands: job_config['commands'],
-      context: context,
-      job_name: data['job_name']
-    }
-  else
-    puts "Branch '#{data['payload']['branch']}' is not whitelisted"
-    nil
-  end
+Contract Or[String, nil], Hash => Bool
+def whitelisted?(branch, in_config:)
+  return true if in_config['branch_whitelist'].nil?
+  in_config['branch_whitelist'].include? branch
 end
 
-QueueHelper.wait_for('parsed-payload') do |data|
-  puts "Assembling: #{data}"
-  assembled_job = assemble_job data
+Contract Hash => Hash
+def sanitize(data)
+  data.each_pair { |key, value| data[key] = value.to_s }
+end
+
+Contract Hash, Hash => Hash
+def job_context(job_environment, context_from_payload)
+  sanitize job_environment.merge(context_from_payload)
+end
+
+Contract String => Or[Hash, nil]
+def load_if_exists(config)
+  puts "Reading job configuration from #{config}"
+  YAML.load_file config if File.exists? config
+end
+
+Contract String => Hash
+def load_config_for(job_name)
+  load_if_exists("#{job_directory}/#{job_name}.yaml") || empty_config
+end
+
+Contract String => [Hash, String]
+def parse_payload(payload)
+  client = EZMQ::Client.new port: configatron.payload_parser_port
+  response = JSON.load client.request(payload)
+  puts response['error'] unless response['error'].empty?
+  [response['payload'], response['error']]
+end
+
+Contract Hash, Hash => Bool
+def can_work_with?(job_config, payload)
+  return false if job_config.empty?
+  return false unless whitelisted? payload['branch'], in_config: job_config
+  true
+end
+
+Contract Hash => Or[Hash, false]
+def assemble_job(request)
+  job_config = load_config_for request['job_name']
+  payload, error = parse_payload request['payload']
+  return false unless error.empty? && can_work_with?(job_config, payload)
+  {
+    commands: job_config['commands'],
+    context: job_context(job_config['environment'], payload),
+    job_name: request['job_name']
+  }
+end
+
+puts 'Started'
+QueueHelper.wait_for('payload') do |request|
+  puts "Assembling: #{request}"
+  assembled_job = assemble_job request
   QueueHelper.enqueue assembled_job, to: 'jobs' if assembled_job
-  $stdout.flush
-  $stderr.flush
 end

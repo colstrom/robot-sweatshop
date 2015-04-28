@@ -1,8 +1,9 @@
+require 'bundler/setup'
 require 'yaml'
 require 'json'
-require_relative '../../lib/sweatshop/moneta-queue'
-require_relative '../../lib/sweatshop/payload/payload'
-require_relative '../../lib/sweatshop/config'
+require 'sweatshop/moneta-queue'
+require 'sweatshop/payload'
+require 'sweatshop/config'
 
 module QueueHelper
   def clear_all_queues
@@ -18,26 +19,34 @@ module QueueHelper
 end
 
 module InHelper
-  def load_payload(of_format)
+  def example_raw_payload(of_format:)
     payload_strings = YAML.load_file "#{__dir__}/../data/payload_data.yaml"
     payload_strings[of_format.downcase]
   end
-  def example_raw_payload(with_format:)
-    payload = load_payload with_format
-    JSON.generate payload: payload,
-                  format: with_format,
-                  job_name: 'test_job'
+  def input_http_url(for_job: 'test_job')
+    "http://localhost:#{configatron.http_port}/payload-for/#{for_job}"
   end
-  def input_http_url(for_job: 'test_job', in_format: 'bitbucket')
-    "http://localhost:#{configatron.http_port}/#{in_format}/payload-for/#{for_job}"
-  end
-end
-
-module PayloadHelper
-  def example_parsed_payload(with_payload: nil, for_branch: 'develop', for_job: 'test_job')
-    payload = with_payload || { branch: for_branch }
+  def example_job_request(of_type:)
+    payload, job_name = case of_type
+    when 'Git'
+      payload = example_raw_payload of_format: 'Bitbucket' # develop branch
+      [payload, 'git_job']
+    when 'JSON'
+      payload = example_raw_payload of_format: 'JSON'
+      [payload, 'test_job']
+    when 'IgnoredBranch'
+      payload = example_raw_payload of_format: 'Github' # master branch
+      [payload, 'git_job']
+    when 'UnknownJob'
+      payload = example_raw_payload of_format: 'Bitbucket'
+      [payload, 'unknown_job']
+    when 'NonJSON'
+      ['not json', 'git_job']
+    else
+      ['', '']
+    end
     JSON.generate payload: payload,
-                  job_name: for_job
+                  job_name: job_name
   end
 end
 
