@@ -13,25 +13,15 @@ given 'the HTTP Input' do
   setup do
     @subscriber = EZMQ::Subscriber.new port: 5557, topic: 'busy-queues'
     @client = EZMQ::Client.new port: 5556
-    @job_name = 'test_job'
     @payload_queue = 'payload'
     clear_all_queues
   end
 
-  %w(Bitbucket Github JSON).each do |format|
+  %w(Bitbucket Github JSON Empty).each do |format|
     context "POSTing #{format} data" do
       setup do
-        url = input_http_url for_job: @job_name
-        payload = example_raw_payload of_format: format
-        user_agent = case format
-        when 'Bitbucket'
-          'Bitbucket.org'
-        when 'Github'
-          'Github-Hookshot/somehash'
-        else
-          'whatever'
-        end
-        HTTP['User-Agent' => user_agent].post(url, body: payload)
+        url = input_http_url for_job: 'test_job'
+        HTTP.post url, body: example_raw_payload(of_format: format)
       end
 
       should 'enqueue to \'payload\'' do
@@ -46,7 +36,7 @@ given 'the HTTP Input' do
         response = @client.request "mirror-#{@payload_queue}"
         data = JSON.parse response
         assert_kind_of String, data['payload']
-        assert_equal format, data['format']
+        assert_kind_of String, data['user_agent']
       end
 
       should 'enqueue job name' do

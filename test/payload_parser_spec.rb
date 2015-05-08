@@ -13,12 +13,12 @@ describe 'the Payload Parser' do
     @client = EZMQ::Client.new port: configatron.payload_parser_port
   end
 
-  %w(Bitbucket Github JSON).each do |format|
+  %w(Bitbucket Github JSON Empty).each do |format|
     given "valid #{format} payloads" do
       setup do
-        payload = example_raw_payload of_format: format
-        @response = Timeout.timeout($for_a_while) do
-          @client.request "#{payload}"
+        payload = example_payload_request of_format: format
+        @response = Timeout.timeout($for_a_moment) do
+          @client.request JSON.dump(payload)
         end
       end
 
@@ -30,6 +30,8 @@ describe 'the Payload Parser' do
         keys = case format
         when 'JSON'
           %w(test1 test2)
+        when 'Empty'
+          []
         else
           Payload.hash_keys
         end
@@ -42,11 +44,11 @@ describe 'the Payload Parser' do
     end
   end
 
-  %w(Empty NonJSON).each do |format|
+  %w(NonJSON).each do |format|
     given "#{format} payloads" do
       setup do
         payload = example_raw_payload of_format: format
-        @response = Timeout.timeout($for_a_while) do
+        @response = Timeout.timeout($for_a_moment) do
           @client.request "#{payload}"
         end
       end

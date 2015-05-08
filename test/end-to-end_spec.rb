@@ -11,18 +11,15 @@ describe 'Robot Sweatshop' do
 
   setup do
     @client = EZMQ::Client.new port: 5556
-    @job_name = 'test_job'
     @test_file = reset_test_file
     clear_all_queues
   end
 
   context "POST git data to the HTTP Input" do
     setup do
-      url = input_http_url for_job: @job_name
-puts "posting..."
-      HTTP.post url, body: example_raw_payload(of_format: 'Bitbucket')
-puts "post successful"
-      sleep $for_everything
+      url = input_http_url for_job: 'test_job'
+      HTTP.post url, body: example_raw_payload(of_format: 'JSON')
+      sleep $for_io_calls
     end
 
     should 'run jobs with the context as environment variables' do

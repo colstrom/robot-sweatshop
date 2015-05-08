@@ -1,6 +1,6 @@
 Gem::Specification.new do |gem|
   gem.name        = 'robot_sweatshop'
-  gem.version     = '0.2.1'
+  gem.version     = '0.3.1'
   gem.licenses    = 'MIT'
   gem.authors     = ['Justin Scott']
   gem.email       = 'jvscott@gmail.com'
@@ -9,7 +9,7 @@ Gem::Specification.new do |gem|
   gem.description = 'A lightweight, unopinionated CI server.'
 
   gem.files         = `git ls-files`.split("\n")
-  gem.test_files    = `git ls-files -- kintama/**/*`.split("\n")
+  gem.test_files    = `git ls-files -- test/**/*`.split("\n")
   gem.executables   = `git ls-files -- bin/*`.split("\n").map { |f| File.basename(f) }
   gem.require_paths = ['lib']
 
@@ -24,6 +24,7 @@ Gem::Specification.new do |gem|
   gem.add_runtime_dependency 'configatron'
   gem.add_runtime_dependency 'moneta'
   gem.add_runtime_dependency 'contracts'
+  gem.add_runtime_dependency 'thin'
 
   gem.add_development_dependency 'rake'
   gem.add_development_dependency 'kintama'

@@ -12,7 +12,7 @@ Robot Sweatshop is a single-purpose CI server that runs collections of arbitrary
 - `gem install robot_sweatshop`
 - `sweatshop start` ([you may need sudo on OSX](https://github.com/JScott/robot_sweatshop/wiki))
 - `sweatshop job example --auto`
-- POST a Github payload to `yourserver.com:8080/payload-for/example`
+- `curl -X POST http://localhost:8080/payload-for/example`
 - `cat .robot_sweatshop/log/job-worker.log`
 
 # Usage
@@ -23,13 +23,14 @@ Robot Sweatshop uses [Eye](https://github.com/kostya/eye) to handle its processe
 
 # Configuration
 
-By default, Robot Sweatshop looks in your current working directory to configure and run. You can supply a custom configuration with `sweatshop config [local|user|system]`. Read [the wiki](https://github.com/JScott/robot_sweatshop/wiki) for more information.
+By default, Robot Sweatshop looks in your current working path to configure and run. You can supply a custom configuration with `sweatshop config [local|user|system]`. Read [the wiki](https://github.com/JScott/robot_sweatshop/wiki) for more information.
 
 # Supported payload formats
 
 - Github (application/json format only)
 - Bitbucket
 - JSON
+- Empty
 
 # Security
 
